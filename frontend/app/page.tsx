@@ -1,69 +1,198 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+type RiskLabel = "Low" | "Medium" | "High";
 
 type AnalysisResult = {
   risk_score: number;
-  risk_label: string;
+  risk_label: RiskLabel;
   matched_phrases: string[];
 };
+
+const TIER_COLOR: Record<RiskLabel, string> = {
+  Low: "var(--sage)",
+  Medium: "var(--honey)",
+  High: "var(--rose)",
+};
+
+const TIER_SOFT: Record<RiskLabel, string> = {
+  Low: "var(--sage-soft)",
+  Medium: "var(--honey-soft)",
+  High: "var(--rose-soft)",
+};
+
+const TIER_NOTE: Record<RiskLabel, string> = {
+  Low: "Nothing in our checklist stood out. Still worth verifying the company yourself.",
+  Medium: "A couple of patterns showed up that are worth a second look.",
+  High: "Several patterns common in bait or scam posts showed up here.",
+};
+
+function ShieldMark({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M12 2.5c2.6 1.6 5 2.2 7.5 2.3.3 5.9-1.6 11.2-7.5 14.2C6.1 16 4.2 10.7 4.5 4.8c2.5-.1 4.9-.7 7.5-2.3Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 12.2l2.3 2.3L15.8 9.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrustRing({ score, tier }: { score: number; tier: RiskLabel }) {
+  const [animated, setAnimated] = useState(0);
+
+  useEffect(() => {
+    setAnimated(0);
+    const t = setTimeout(() => setAnimated(score), 80);
+    return () => clearTimeout(t);
+  }, [score]);
+
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (animated / 100) * circumference;
+
+  return (
+    <svg width="132" height="132" viewBox="0 0 132 132" className="shrink-0">
+      <circle cx="66" cy="66" r={radius} fill="none" stroke="var(--line)" strokeWidth="11" />
+      <circle
+        cx="66"
+        cy="66"
+        r={radius}
+        fill="none"
+        stroke={TIER_COLOR[tier]}
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform="rotate(-90 66 66)"
+        style={{ transition: "stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1), stroke .3s" }}
+      />
+      <text x="66" y="62" textAnchor="middle" style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 600, fill: "var(--ink)" }}>
+        {score}
+      </text>
+      <text x="66" y="82" textAnchor="middle" style={{ fontFamily: "var(--font-body)", fontSize: 11, fill: "var(--ink-soft)" }}>
+        out of 100
+      </text>
+    </svg>
+  );
+}
 
 export default function Home() {
   const [jobText, setJobText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleAnalyze() {
     setLoading(true);
+    setError("");
+    setResult(null);
     try {
       const res = await fetch("http://localhost:8000/api/analyze/text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw_text: jobText }),
       });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       setResult(data);
-    } catch (err) {
-      alert("Couldn't reach the backend. Is it running on localhost:8000?");
+    } catch {
+      setError("Couldn't reach the backend — make sure FastAPI is running on localhost:8000.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold mb-4">🛡️ OfferGuard AI</h1>
-      <p className="text-slate-400 text-lg max-w-xl text-center mb-8">
-        Paste a job post and get an authenticity score, risk signals, and evidence — before you apply.
-      </p>
-      <textarea
-        className="w-full max-w-xl h-40 p-4 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500"
-        placeholder="Paste a LinkedIn job post here..."
-        value={jobText}
-        onChange={(e) => setJobText(e.target.value)}
-      />
-      <button
-        onClick={handleAnalyze}
-        disabled={loading || !jobText}
-        className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-lg font-medium transition"
-      >
-        {loading ? "Analyzing..." : "Analyze Job Post"}
-      </button>
+    <main className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-6 py-16 md:py-24">
+        <div className="flex items-center gap-2 mb-14" style={{ color: "var(--sage-deep)" }}>
+          <ShieldMark className="w-5 h-5" />
+          <span className="text-sm font-medium tracking-wide">OfferGuard AI</span>
+        </div>
 
-      {result && (
-        <div className="mt-8 w-full max-w-xl p-6 rounded-lg bg-slate-900 border border-slate-700">
-          <p className="text-2xl font-bold">
-            Risk: {result.risk_label} ({result.risk_score}/100)
-          </p>
-          {result.matched_phrases.length > 0 && (
-            <ul className="mt-3 text-slate-400 list-disc list-inside">
-              {result.matched_phrases.map((phrase) => (
-                <li key={phrase}>Found: "{phrase}"</li>
-              ))}
-            </ul>
+        <h1 className="text-4xl md:text-5xl leading-tight mb-4" style={{ fontFamily: "var(--font-display)", fontWeight: 500 }}>
+          Know before you <em style={{ color: "var(--sage-deep)", fontStyle: "italic" }}>apply</em>.
+        </h1>
+        <p className="text-lg mb-10 max-w-md" style={{ color: "var(--ink-soft)" }}>
+          Paste any job post and see what's really behind it, before you hand over a resume.
+        </p>
+
+        <div
+          className="relative rounded-3xl p-2 mb-4"
+          style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "0 1px 2px rgba(54,50,40,0.04), 0 16px 32px rgba(54,50,40,0.06)" }}
+        >
+          <textarea
+            value={jobText}
+            onChange={(e) => setJobText(e.target.value)}
+            placeholder="Paste a LinkedIn job post here…"
+            rows={6}
+            className="oga-input w-full resize-none rounded-2xl px-5 py-4 bg-transparent"
+          />
+          {loading && (
+            <div className="absolute inset-x-2 top-2 bottom-2 rounded-2xl overflow-hidden pointer-events-none">
+              <div className="scan-sweep-line" />
+            </div>
           )}
         </div>
-      )}
+
+        <div className="flex flex-wrap items-center gap-4 mb-2">
+          <button
+            onClick={handleAnalyze}
+            disabled={loading || !jobText.trim()}
+            className="px-6 py-2.5 rounded-full font-medium text-white transition hover:brightness-105 active:brightness-95 disabled:opacity-40"
+            style={{ background: "var(--sage-deep)" }}
+          >
+            {loading ? "Reading…" : "Check this post"}
+          </button>
+          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+            Takes a couple seconds. Nothing you paste is stored.
+          </span>
+        </div>
+
+        {error && (
+          <div className="mt-6 rounded-2xl px-5 py-4 text-sm fade-up" style={{ background: "var(--rose-soft)", border: "1px solid var(--rose)" }}>
+            {error}
+          </div>
+        )}
+
+        {result && (
+          <div
+            className="mt-8 rounded-3xl p-7 flex flex-col sm:flex-row gap-6 items-center sm:items-start fade-up"
+            style={{ background: TIER_SOFT[result.risk_label], border: "1px solid var(--line)" }}
+          >
+            <TrustRing score={result.risk_score} tier={result.risk_label} />
+            <div>
+              <p className="text-xl mb-1 flex items-center gap-2 justify-center sm:justify-start" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
+                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIER_COLOR[result.risk_label] }} />
+                {result.risk_label} risk
+              </p>
+              <p className="text-sm mb-3 text-center sm:text-left" style={{ color: "var(--ink-soft)" }}>
+                {TIER_NOTE[result.risk_label]}
+              </p>
+              {result.matched_phrases.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  {result.matched_phrases.map((phrase) => (
+                    <span key={phrase} className="text-xs px-3 py-1 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
+                      "{phrase}"
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
