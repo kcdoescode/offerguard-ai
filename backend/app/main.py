@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.services.engagement_bait_detector import extract_engagement_bait
+from app.services.scam_signal_extractor import extract_scam_signals
+from app.services.scoring_engine import compute_overall_score
+
 app = FastAPI(title="OfferGuard AI")
 
-# Lets your Next.js frontend (localhost:3000) call this API (localhost:8000)
-# without the browser blocking the request
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -16,20 +18,22 @@ app.add_middleware(
 class AnalyzeRequest(BaseModel):
     raw_text: str
 
-BAIT_PHRASES = ["comment interested", "drop your resume", "follow me for", "dm me for"]
-
 @app.get("/")
 def root():
     return {"status": "OfferGuard AI backend is running"}
 
 @app.post("/api/analyze/text")
 def analyze_text(request: AnalyzeRequest):
-    text_lower = request.raw_text.lower()
-    matched = [p for p in BAIT_PHRASES if p in text_lower]
-    risk_score = min(100, len(matched) * 25)
-    label = "Low" if risk_score < 35 else "Medium" if risk_score < 65 else "High"
+    bait = extract_engagement_bait(request.raw_text)
+    scam = extract_scam_signals(request.raw_text)
+    overall = compute_overall_score(bait["score"], scam["score"])
+
     return {
-        "risk_score": risk_score,
-        "risk_label": label,
-        "matched_phrases": matched,
+        "risk_score": overall["score"],
+        "risk_label": overall["label"],
+        "category_scores": {
+            "engagement_bait": bait["score"],
+            "scam_pressure": scam["score"],
+        },
+        "matched_phrases": bait["matched_phrases"] + scam["matched_phrases"],
     }
