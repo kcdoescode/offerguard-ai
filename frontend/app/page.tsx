@@ -7,6 +7,7 @@ type RiskLabel = "Low" | "Medium" | "High";
 type AnalysisResult = {
   risk_score: number;
   risk_label: RiskLabel;
+  category_scores: Record<string, number>;
   matched_phrases: string[];
 };
 
@@ -14,6 +15,17 @@ const TIER_COLOR: Record<RiskLabel, string> = {
   Low: "var(--sage)",
   Medium: "var(--honey)",
   High: "var(--rose)",
+};
+
+function tierFromScore(score: number): RiskLabel {
+  if (score < 35) return "Low";
+  if (score < 65) return "Medium";
+  return "High";
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  engagement_bait: "Engagement bait",
+  scam_pressure: "Scam pressure",
 };
 
 const TIER_SOFT: Record<RiskLabel, string> = {
@@ -172,14 +184,32 @@ export default function Home() {
             style={{ background: TIER_SOFT[result.risk_label], border: "1px solid var(--line)" }}
           >
             <TrustRing score={result.risk_score} tier={result.risk_label} />
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-xl mb-1 flex items-center gap-2 justify-center sm:justify-start" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
                 <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIER_COLOR[result.risk_label] }} />
                 {result.risk_label} risk
               </p>
-              <p className="text-sm mb-3 text-center sm:text-left" style={{ color: "var(--ink-soft)" }}>
+              <p className="text-sm mb-4 text-center sm:text-left" style={{ color: "var(--ink-soft)" }}>
                 {TIER_NOTE[result.risk_label]}
               </p>
+
+              <div className="mb-4 space-y-2">
+                {Object.entries(result.category_scores).map(([key, value]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-1" style={{ color: "var(--ink-soft)" }}>
+                      <span>{CATEGORY_LABEL[key] ?? key}</span>
+                      <span>{value}/100</span>
+                    </div>
+                    <div className="h-1.5 rounded-full" style={{ background: "var(--line)" }}>
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-700"
+                        style={{ width: `${value}%`, background: TIER_COLOR[tierFromScore(value)] }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {result.matched_phrases.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                   {result.matched_phrases.map((phrase) => (
