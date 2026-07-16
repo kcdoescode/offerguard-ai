@@ -32,3 +32,13 @@ def best_semantic_matches(text: str, reference_phrases: list[str], threshold: fl
                 "similarity": round(best_score, 2),
             })
     return hits
+
+
+def text_similarity(text_a: str, text_b: str) -> float:
+    """Whole-text semantic similarity — how close in overall meaning two
+    pieces of text are, rather than sentence-by-sentence."""
+    if not text_a.strip() or not text_b.strip():
+        return 0.0
+    model = get_model()
+    embeddings = model.encode([text_a, text_b], convert_to_tensor=True)
+    return float(util.cos_sim(embeddings[0], embeddings[1])[0][0])

@@ -41,9 +41,6 @@ def similarity_ratio(a: str, b: str) -> float:
 
 
 def domain_looks_unrelated(domain: str, company_name: str) -> bool:
-    """Heuristic only — acronyms (e.g. TCS for Tata Consultancy Services) can
-    false-positive here until the Official Verifier checks a real known-good
-    domain instead of guessing from the company name alone."""
     company = re.sub(r"[^a-z0-9]", "", company_name.lower())
     domain_clean = re.sub(r"[^a-z0-9]", "", domain.lower())
     if not company or not domain_clean:
@@ -53,7 +50,7 @@ def domain_looks_unrelated(domain: str, company_name: str) -> bool:
     return similarity_ratio(company, domain_clean) < 0.35
 
 
-def analyze_link(apply_url: str, company_name: str | None = None) -> dict:
+def analyze_link(apply_url: str, company_name: str | None = None, skip_domain_check: bool = False) -> dict:
     if not apply_url:
         return {"score": 0, "evidence": ["No apply link provided — link checks were skipped."]}
 
@@ -69,8 +66,11 @@ def analyze_link(apply_url: str, company_name: str | None = None) -> dict:
         score += 35
         evidence.append(f"Apply link uses a URL shortener ({domain}) — the real destination is hidden.")
 
-    if company_name and domain_looks_unrelated(domain, company_name):
-        score += 30
-        evidence.append(f'Post claims "{company_name}" but the apply link domain ({domain}) doesn\'t clearly match.')
+    if company_name:
+        if skip_domain_check:
+            evidence.append("Domain-vs-company check skipped — already verified independently against your official listing.")
+        elif domain_looks_unrelated(domain, company_name):
+            score += 30
+            evidence.append(f'Post claims "{company_name}" but the apply link domain ({domain}) doesn\'t clearly match.')
 
     return {"score": min(100, score), "evidence": evidence}

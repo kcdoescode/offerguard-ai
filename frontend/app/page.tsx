@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 type RiskLabel = "Low" | "Medium" | "High";
+type VerificationStatus = "MATCH_FOUND" | "POSSIBLE_MATCH" | "NOT_FOUND" | "CANNOT_VERIFY";
 
 type AnalysisResult = {
   risk_score: number;
@@ -10,6 +11,11 @@ type AnalysisResult = {
   category_scores: Record<string, number>;
   matched_phrases: string[];
   evidence: string[];
+  verification: {
+    status: VerificationStatus;
+    similarity: number | null;
+    message: string;
+  };
 };
 
 const TIER_COLOR: Record<RiskLabel, string> = {
@@ -28,6 +34,21 @@ const CATEGORY_LABEL: Record<string, string> = {
   engagement_bait: "Engagement bait",
   scam_pressure: "Scam pressure",
   link_domain_risk: "Link & domain risk",
+  official_mismatch: "Official-source mismatch",
+};
+
+const VERIFICATION_LABEL: Record<VerificationStatus, string> = {
+  MATCH_FOUND: "Verified",
+  POSSIBLE_MATCH: "Partial match",
+  NOT_FOUND: "Not found",
+  CANNOT_VERIFY: "Unverified",
+};
+
+const VERIFICATION_BG: Record<VerificationStatus, string> = {
+  MATCH_FOUND: "var(--sage-soft)",
+  POSSIBLE_MATCH: "var(--honey-soft)",
+  NOT_FOUND: "var(--rose-soft)",
+  CANNOT_VERIFY: "var(--surface)",
 };
 
 const TIER_SOFT: Record<RiskLabel, string> = {
@@ -105,6 +126,8 @@ export default function Home() {
   const [jobText, setJobText] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [applyUrl, setApplyUrl] = useState("");
+  const [officialListingText, setOfficialListingText] = useState("");
+  const [showVerifier, setShowVerifier] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -121,6 +144,7 @@ export default function Home() {
           raw_text: jobText,
           apply_url: applyUrl || null,
           company_name: companyName || null,
+          official_listing_text: officialListingText || null,
         }),
       });
       if (!res.ok) throw new Error("Request failed");
@@ -166,7 +190,7 @@ export default function Home() {
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-3">
           <input
             type="text"
             value={companyName}
@@ -184,6 +208,31 @@ export default function Home() {
             style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
           />
         </div>
+
+        {!showVerifier ? (
+          <button
+            type="button"
+            onClick={() => setShowVerifier(true)}
+            className="text-sm mb-4 underline underline-offset-2"
+            style={{ color: "var(--sage-deep)" }}
+          >
+            + Check against the real listing (optional)
+          </button>
+        ) : (
+          <div className="mb-4">
+            <label className="text-xs mb-1 block" style={{ color: "var(--ink-soft)" }}>
+              Paste the listing from the company&apos;s actual careers page
+            </label>
+            <textarea
+              value={officialListingText}
+              onChange={(e) => setOfficialListingText(e.target.value)}
+              placeholder="Paste the official job listing text here…"
+              rows={4}
+              className="oga-input w-full resize-none rounded-xl px-4 py-3 text-sm"
+              style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+            />
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4 mb-2">
           <button
@@ -211,7 +260,7 @@ export default function Home() {
             style={{ background: TIER_SOFT[result.risk_label], border: "1px solid var(--line)" }}
           >
             <TrustRing score={result.risk_score} tier={result.risk_label} />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
               <p className="text-xl mb-1 flex items-center gap-2 justify-center sm:justify-start" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
                 <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIER_COLOR[result.risk_label] }} />
                 {result.risk_label} risk
@@ -236,6 +285,18 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              {result.verification && (
+                <div
+                  className="mb-4 rounded-xl px-4 py-3 text-sm text-center sm:text-left"
+                  style={{ background: VERIFICATION_BG[result.verification.status], border: "1px solid var(--line)" }}
+                >
+                  <span style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
+                    {VERIFICATION_LABEL[result.verification.status]}
+                  </span>
+                  <span style={{ color: "var(--ink-soft)" }}> — {result.verification.message}</span>
+                </div>
+              )}
 
               {result.evidence.length > 0 && (
                 <ul className="text-sm mb-3 space-y-1 list-disc list-inside" style={{ color: "var(--ink-soft)" }}>

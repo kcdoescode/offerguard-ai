@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.services.engagement_bait_detector import extract_engagement_bait
 from app.services.scam_signal_extractor import extract_scam_signals
 from app.services.link_analyzer import analyze_link
+from app.services.official_verifier import verify_official_listing
 from app.services.scoring_engine import compute_overall_score
 
 app = FastAPI(title="OfferGuard AI")
@@ -21,6 +22,7 @@ class AnalyzeRequest(BaseModel):
     raw_text: str
     apply_url: str | None = None
     company_name: str | None = None
+    official_listing_text: str | None = None
 
 
 @app.get("/")
@@ -32,8 +34,13 @@ def root():
 def analyze_text(request: AnalyzeRequest):
     bait = extract_engagement_bait(request.raw_text)
     scam = extract_scam_signals(request.raw_text)
-    link = analyze_link(request.apply_url or "", request.company_name)
-    overall = compute_overall_score(bait["score"], scam["score"], link["score"])
+    verification = verify_official_listing(request.raw_text, request.official_listing_text)
+    link = analyze_link(
+        request.apply_url or "",
+        request.company_name,
+        skip_domain_check=(verification["status"] == "MATCH_FOUND"),
+    )
+    overall = compute_overall_score(bait["score"], scam["score"], link["score"], verification["score"])
 
     return {
         "risk_score": overall["score"],
@@ -42,7 +49,13 @@ def analyze_text(request: AnalyzeRequest):
             "engagement_bait": bait["score"],
             "scam_pressure": scam["score"],
             "link_domain_risk": link["score"],
+            "official_mismatch": verification["score"],
         },
         "matched_phrases": bait["matched_phrases"] + scam["matched_phrases"],
         "evidence": link["evidence"],
+        "verification": {
+            "status": verification["status"],
+            "similarity": verification["similarity"],
+            "message": verification["message"],
+        },
     }
