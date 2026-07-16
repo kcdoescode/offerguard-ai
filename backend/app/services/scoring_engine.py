@@ -1,8 +1,8 @@
-def compute_overall_score(engagement_score: int, scam_score: int) -> dict:
-    # The blueprint's full formula also weighs in official-source mismatch,
-    # link/domain risk, recruiter credibility, and reputation reports — all 0
-    # for now, since we haven't built those yet. Until they exist, we weight
-    # only these two, roughly matching the blueprint's ratio (bait 20% : scam 25%).
-    overall = round(0.45 * engagement_score + 0.55 * scam_score)
+def compute_overall_score(engagement_score: int, scam_score: int, link_score: int) -> dict:
+    # Covers 3 of the blueprint's 6 categories so far — engagement bait (20%),
+    # scam pressure (25%), link/domain risk (15%) — re-weighted proportionally
+    # (0.33 / 0.42 / 0.25) until official-verifier, recruiter-trust, and
+    # reputation-reports exist too and the full 6-way formula can be restored.
+    overall = round(0.33 * engagement_score + 0.42 * scam_score + 0.25 * link_score)
     label = "Low" if overall < 35 else "Medium" if overall < 65 else "High"
     return {"score": overall, "label": label}

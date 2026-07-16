@@ -9,6 +9,7 @@ type AnalysisResult = {
   risk_label: RiskLabel;
   category_scores: Record<string, number>;
   matched_phrases: string[];
+  evidence: string[];
 };
 
 const TIER_COLOR: Record<RiskLabel, string> = {
@@ -26,6 +27,7 @@ function tierFromScore(score: number): RiskLabel {
 const CATEGORY_LABEL: Record<string, string> = {
   engagement_bait: "Engagement bait",
   scam_pressure: "Scam pressure",
+  link_domain_risk: "Link & domain risk",
 };
 
 const TIER_SOFT: Record<RiskLabel, string> = {
@@ -101,6 +103,8 @@ function TrustRing({ score, tier }: { score: number; tier: RiskLabel }) {
 
 export default function Home() {
   const [jobText, setJobText] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [applyUrl, setApplyUrl] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -113,7 +117,11 @@ export default function Home() {
       const res = await fetch("http://localhost:8000/api/analyze/text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ raw_text: jobText }),
+        body: JSON.stringify({
+          raw_text: jobText,
+          apply_url: applyUrl || null,
+          company_name: companyName || null,
+        }),
       });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
@@ -141,7 +149,7 @@ export default function Home() {
         </p>
 
         <div
-          className="relative rounded-3xl p-2 mb-4"
+          className="relative rounded-3xl p-2 mb-3"
           style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "0 1px 2px rgba(54,50,40,0.04), 0 16px 32px rgba(54,50,40,0.06)" }}
         >
           <textarea
@@ -156,6 +164,25 @@ export default function Home() {
               <div className="scan-sweep-line" />
             </div>
           )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="text"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Company name (optional)"
+            className="oga-input flex-1 rounded-xl px-4 py-2.5 text-sm"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+          />
+          <input
+            type="text"
+            value={applyUrl}
+            onChange={(e) => setApplyUrl(e.target.value)}
+            placeholder="Apply link (optional)"
+            className="oga-input flex-1 rounded-xl px-4 py-2.5 text-sm"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-4 mb-2">
@@ -209,6 +236,14 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              {result.evidence.length > 0 && (
+                <ul className="text-sm mb-3 space-y-1 list-disc list-inside" style={{ color: "var(--ink-soft)" }}>
+                  {result.evidence.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              )}
 
               {result.matched_phrases.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
