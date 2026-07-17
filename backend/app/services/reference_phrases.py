@@ -15,4 +15,7 @@ SCAM_PRESSURE_EXAMPLES = [
     "Share your bank details so we can process your first payment",
     "Send your Aadhaar number to verify your identity",
     "Immediate joining required, no interview needed",
+    "Interested candidates must pay a small fee",
+    "Pay the applicable fee to proceed with your application",
+    "A small deposit is required before we can confirm your position",
 ]

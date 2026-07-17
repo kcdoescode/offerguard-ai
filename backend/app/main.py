@@ -40,7 +40,15 @@ def analyze_text(request: AnalyzeRequest):
         request.company_name,
         skip_domain_check=(verification["status"] == "MATCH_FOUND"),
     )
-    overall = compute_overall_score(bait["score"], scam["score"], link["score"], verification["score"])
+    overall = compute_overall_score(
+        bait["score"],
+        scam["score"],
+        link["score"],
+        verification["score"],
+        link_provided=bool(request.apply_url),
+        official_provided=bool(request.official_listing_text),
+        hard_scam_signal_count=scam["hard_signal_count"],
+    )
 
     return {
         "risk_score": overall["score"],

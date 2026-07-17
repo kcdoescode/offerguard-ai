@@ -4,6 +4,7 @@ from app.services.reference_phrases import SCAM_PRESSURE_EXAMPLES
 PAYMENT_PATTERNS = [
     "registration fee", "refundable deposit", "security deposit",
     "processing fee", "training fee", "pay to apply", "one-time payment",
+    "pay fee", "small fee", "nominal fee", "applicable fee", "deposit required",
 ]
 
 URGENCY_PATTERNS = [
@@ -37,7 +38,10 @@ def extract_scam_signals(text: str) -> dict:
     )
     keyword_matched = payment_hits + urgency_hits + off_platform_hits + identity_hits
 
-    semantic_hits = best_semantic_matches(text, SCAM_PRESSURE_EXAMPLES)
+    # Lower threshold than engagement-bait (0.55) — scam signals are the
+    # safety-critical category, worth catching more borderline phrasing
+    # even at the cost of an occasional false positive
+    semantic_hits = best_semantic_matches(text, SCAM_PRESSURE_EXAMPLES, threshold=0.45)
     new_semantic_hits = [
         h for h in semantic_hits if not any(kw in h["sentence"].lower() for kw in ALL_KEYWORD_PATTERNS)
     ]
@@ -47,4 +51,7 @@ def extract_scam_signals(text: str) -> dict:
     ]
 
     score = min(100, keyword_score + len(new_semantic_hits) * 20)
-    return {"score": score, "matched_phrases": keyword_matched + semantic_phrases}
+    # Payment and identity-document requests are the two most serious sub-
+    # categories — this count feeds the severity floor in scoring_engine.py
+    hard_signal_count = len(payment_hits) + len(identity_hits)
+    return {"score": score, "matched_phrases": keyword_matched + semantic_phrases, "hard_signal_count": hard_signal_count}
