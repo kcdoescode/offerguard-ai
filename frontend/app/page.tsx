@@ -63,6 +63,50 @@ const TIER_NOTE: Record<RiskLabel, string> = {
   High: "Several patterns common in bait or scam posts showed up here.",
 };
 
+function buildSecondOpinionPrompt(
+  jobText: string,
+  companyName: string,
+  applyUrl: string,
+  result: AnalysisResult
+): string {
+  const lines: string[] = [];
+  lines.push(
+    "I'm evaluating whether a job posting is legitimate or a scam/engagement-bait post. Please give me your honest, direct assessment - I'd rather hear that something looks off than be reassured unnecessarily."
+  );
+  lines.push("");
+  lines.push("JOB POST:");
+  lines.push('"""');
+  lines.push(jobText);
+  lines.push('"""');
+  if (companyName || applyUrl) {
+    lines.push("");
+    if (companyName) lines.push("Claimed company: " + companyName);
+    if (applyUrl) lines.push("Apply link given: " + applyUrl);
+  }
+  lines.push("");
+  lines.push(
+    "An automated screening tool (OfferGuard AI) already checked this and flagged the following - feel free to agree, disagree, or add anything it may have missed:"
+  );
+  lines.push("- Overall: " + result.risk_label + " risk (" + result.risk_score + "/100)");
+  Object.entries(result.category_scores).forEach(([key, value]) => {
+    lines.push("- " + (CATEGORY_LABEL[key] ?? key) + ": " + value + "/100");
+  });
+  if (result.matched_phrases.length > 0) {
+    lines.push("- Flagged phrases: " + result.matched_phrases.join("; "));
+  }
+  if (result.evidence.length > 0) {
+    lines.push("- Link/domain notes: " + result.evidence.join("; "));
+  }
+  lines.push("");
+  lines.push("Please answer:");
+  lines.push("1. Does this look like a genuine job posting? Why or why not?");
+  lines.push(
+    "2. Any red flags the automated tool might have missed - unrealistic salary, vague company details, pressure tactics, requests for personal or financial information?"
+  );
+  lines.push("3. What would you do before applying or sharing any personal information here?");
+  return lines.join("\n");
+}
+
 function ShieldMark({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
@@ -128,6 +172,8 @@ export default function Home() {
   const [applyUrl, setApplyUrl] = useState("");
   const [officialListingText, setOfficialListingText] = useState("");
   const [showVerifier, setShowVerifier] = useState(false);
+  const [showSecondOpinion, setShowSecondOpinion] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -136,6 +182,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setResult(null);
+    setShowSecondOpinion(false);
     try {
       const res = await fetch("http://localhost:8000/api/analyze/text", {
         method: "POST",
@@ -151,11 +198,24 @@ export default function Home() {
       const data = await res.json();
       setResult(data);
     } catch {
-      setError("Couldn't reach the backend — make sure FastAPI is running on localhost:8000.");
+      setError("Couldn't reach the backend - make sure FastAPI is running on localhost:8000.");
     } finally {
       setLoading(false);
     }
   }
+
+  async function handleCopyPrompt(promptText: string) {
+    try {
+      await navigator.clipboard.writeText(promptText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API can be blocked in some browser contexts - the textarea
+      // below still has the full text, ready to select and copy manually
+    }
+  }
+
+  const secondOpinionPrompt = result ? buildSecondOpinionPrompt(jobText, companyName, applyUrl, result) : "";
 
   return (
     <main className="min-h-screen">
@@ -179,7 +239,7 @@ export default function Home() {
           <textarea
             value={jobText}
             onChange={(e) => setJobText(e.target.value)}
-            placeholder="Paste a LinkedIn job post here…"
+            placeholder="Paste a LinkedIn job post here..."
             rows={6}
             className="oga-input w-full resize-none rounded-2xl px-5 py-4 bg-transparent"
           />
@@ -226,7 +286,7 @@ export default function Home() {
             <textarea
               value={officialListingText}
               onChange={(e) => setOfficialListingText(e.target.value)}
-              placeholder="Paste the official job listing text here…"
+              placeholder="Paste the official job listing text here..."
               rows={4}
               className="oga-input w-full resize-none rounded-xl px-4 py-3 text-sm"
               style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
@@ -241,7 +301,7 @@ export default function Home() {
             className="px-6 py-2.5 rounded-full font-medium text-white transition hover:brightness-105 active:brightness-95 disabled:opacity-40"
             style={{ background: "var(--sage-deep)" }}
           >
-            {loading ? "Reading…" : "Check this post"}
+            {loading ? "Reading..." : "Check this post"}
           </button>
           <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
             Takes a couple seconds. Nothing you paste is stored.
@@ -294,7 +354,7 @@ export default function Home() {
                   <span style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
                     {VERIFICATION_LABEL[result.verification.status]}
                   </span>
-                  <span style={{ color: "var(--ink-soft)" }}> — {result.verification.message}</span>
+                  <span style={{ color: "var(--ink-soft)" }}> - {result.verification.message}</span>
                 </div>
               )}
 
@@ -307,12 +367,74 @@ export default function Home() {
               )}
 
               {result.matched_phrases.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-1">
                   {result.matched_phrases.map((phrase) => (
                     <span key={phrase} className="text-xs px-3 py-1 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
                       "{phrase}"
                     </span>
                   ))}
+                </div>
+              )}
+
+              {!showSecondOpinion ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSecondOpinion(true)}
+                  className="text-sm mt-4 underline underline-offset-2"
+                  style={{ color: "var(--sage-deep)" }}
+                >
+                  Still not sure? Get a second opinion
+                </button>
+              ) : (
+                <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--line)" }}>
+                  <p className="text-sm mb-2" style={{ color: "var(--ink-soft)" }}>
+                    This includes what OfferGuard found so far. Copy it, then paste it into any AI chat - nothing is sent automatically.
+                  </p>
+                  <textarea
+                    readOnly
+                    value={secondOpinionPrompt}
+                    rows={6}
+                    onClick={(e) => e.currentTarget.select()}
+                    className="oga-input w-full resize-none rounded-xl px-4 py-3 text-xs mb-3"
+                    style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-soft)" }}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPrompt(secondOpinionPrompt)}
+                      className="px-4 py-2 rounded-full text-sm font-medium text-white transition hover:brightness-105"
+                      style={{ background: "var(--sage-deep)" }}
+                    >
+                      {copied ? "Copied!" : "Copy prompt"}
+                    </button>
+                    
+                      <a href="https://chatgpt.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full text-sm"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      Open ChatGPT
+                    </a>
+                    
+                     <a href="https://claude.ai/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full text-sm"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      Open Claude
+                    </a>
+                    
+                     <a href="https://gemini.google.com/app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full text-sm"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      Open Gemini
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
