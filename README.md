@@ -8,12 +8,28 @@
 
 <br />
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Open_OfferGuard-4F7665?style=for-the-badge&logo=vercel&logoColor=white)](https://offerguard-ai.vercel.app/)
+[![Source Code](https://img.shields.io/badge/Source_Code-GitHub-24292F?style=for-the-badge&logo=github&logoColor=white)](https://github.com/kcdoescode/offerguard-ai)
+
+<br />
+
 ![Next.js](https://img.shields.io/badge/Next.js-App_Router-black?logo=nextdotjs)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Frontend-3178C6?logo=typescript&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-AI_Engine-3776AB?logo=python&logoColor=white)
-![Local AI](https://img.shields.io/badge/AI-Local_CPU_Inference-6C63FF)
-![License](https://img.shields.io/badge/Status-Portfolio_Project-blue)
+![NLP](https://img.shields.io/badge/NLP-Sentence_Transformers-6C63FF)
+![Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)
+![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)
+
+<br />
+
+<a href="https://offerguard-ai.vercel.app/">
+  <img src="./assets/offerguard-home.png" alt="OfferGuard AI home screen" width="100%" />
+</a>
+
+<p>
+  <a href="https://offerguard-ai.vercel.app/"><strong>Try the live application →</strong></a>
+</p>
 
 </div>
 
@@ -33,6 +49,8 @@ Some posts are designed to:
 - imitate a real company vacancy without matching its official listing.
 
 OfferGuard AI evaluates these signals across multiple independent categories and explains **why** a post received its risk score.
+
+🌐 **Live application:** [https://offerguard-ai.vercel.app/](https://offerguard-ai.vercel.app/)
 
 > OfferGuard AI reports risk indicators—not accusations. It is a decision-support tool and should not be treated as proof of fraud.
 
@@ -96,6 +114,33 @@ Every result includes:
 - individual category scores;
 - the exact text evidence that triggered each signal;
 - an animated risk ring and category breakdown.
+
+---
+
+## 📸 Application Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="./assets/offerguard-home.png" alt="OfferGuard AI input screen" width="100%" />
+      <br /><strong>1. Paste a job post</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="./assets/offerguard-analyzing.png" alt="OfferGuard AI analyzing a job post" width="100%" />
+      <br /><strong>2. Run the analysis</strong>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="./assets/offerguard-risk-report.png" alt="OfferGuard AI high-risk report" width="100%" />
+      <br /><strong>3. Review the risk score and evidence</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="./assets/offerguard-second-opinion.png" alt="OfferGuard AI second-opinion prompt" width="100%" />
+      <br /><strong>4. Copy a second-opinion prompt</strong>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -201,6 +246,18 @@ Next.js frontend
 | Detection | Keyword rules, regex patterns, semantic similarity |
 | Runtime | Local CPU inference |
 | API Format | REST + JSON |
+| Deployment | Vercel frontend, Render backend |
+
+---
+
+## 🌐 Live Deployment
+
+| Service | URL |
+|---|---|
+| Frontend | [https://offerguard-ai.vercel.app/](https://offerguard-ai.vercel.app/) |
+| Backend | [https://offerguard-backend-xqlo.onrender.com/](https://offerguard-backend-xqlo.onrender.com/) |
+
+The Render service may take a few seconds to wake after inactivity on a free hosting plan.
 
 ---
 
@@ -363,7 +420,7 @@ Install:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/PavanOvhal/offerguard-ai.git
+git clone https://github.com/kcdoescode/offerguard-ai.git
 cd offerguard-ai
 ```
 
@@ -448,6 +505,12 @@ The response includes the overall score, risk level, category-level scores, and 
 
 ```text
 offerguard-ai/
+├── assets/
+│   ├── offerguard-home.png
+│   ├── offerguard-analyzing.png
+│   ├── offerguard-risk-report.png
+│   └── offerguard-second-opinion.png
+│
 ├── backend/
 │   ├── app/
 │   │   ├── services/
@@ -479,8 +542,8 @@ offerguard-ai/
 - [ ] Supervised classifier trained on labelled examples
 - [ ] Analysis history and exportable reports
 - [ ] Expanded multilingual risk-phrase support
-- [ ] Frontend deployment on Vercel
-- [ ] Backend deployment on a cloud hosting platform
+- [x] Frontend deployed on Vercel
+- [x] Backend deployed on Render
 
 ---
 
@@ -497,5 +560,7 @@ It should not be used to publicly accuse an employer, recruiter, or individual o
 ### Built to help applicants pause, verify, and apply more safely.
 
 **OfferGuard AI · Next.js · FastAPI · Local NLP**
+
+[Live Demo](https://offerguard-ai.vercel.app/) · [GitHub Repository](https://github.com/kcdoescode/offerguard-ai)
 
 </div>
