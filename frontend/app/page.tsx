@@ -184,7 +184,7 @@ export default function Home() {
     setResult(null);
     setShowSecondOpinion(false);
     try {
-      const res = await fetch("http://localhost:8000/api/analyze/text", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze/text`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
